@@ -4,7 +4,6 @@ from PyQt4.QtGui import *
 
 import csv
 
-from scipy import interpolate
 import math
 import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -55,7 +54,7 @@ class Data:
             if self.joints[-1] == '':
                 self.joints = self.joints[:-1]
 
-            data = np.loadtxt(f, delimiter='\t', skiprows=6)
+            data = np.genfromtxt(f, delimiter='\t', skip_header=6, missing_values=' ')
             self.x = data[:, 2::3]
             self.y = data[:, 3::3]
             self.z = data[:, 4::3]
