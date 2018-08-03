@@ -147,6 +147,7 @@ class trcReader(QMainWindow, Data):
 
         output_action = self.create_action("&Output", slot=self.output, shortcut="Ctrl+O", tip="Output annotated csv file")
         self.add_actions(self.file_menu, (output_action,))
+        output_action.setEnabled(False)
 
         quit_action = self.create_action("&Quit", slot=self.close, shortcut="Ctrl+Q", tip="Close the application")
         self.add_actions(self.file_menu, (None, quit_action))
@@ -233,7 +234,7 @@ class trcReader(QMainWindow, Data):
 
     def output(self):
         if self.filed:
-            filters = "TRC files(*.trc)"
+            filters = "MP4 files(*.MP4)"
              #selected_filter = "CSV files(*.csv)"
             savepath, extension = QFileDialog.getSaveFileNameAndFilter(self, 'Save file', '', filters)
 
@@ -241,39 +242,8 @@ class trcReader(QMainWindow, Data):
             extension = str(extension).encode()
             #print(extension)
             if savepath != "":
-                savepath += '.trc'
-                with open(savepath, 'wb') as f:
-                    f.write("PathType,4,(X/Y/Z),{0},\n".format(savepath))
-                    f.write("DataRate,CameraRate,NumFrames,NumMarkers,Units,OrigDataRate,OrigDataStartFrame,OrigNumFrames,\n")
-                    f.write("{0},{0},{1},{2},{3},{0},1,{1},\n".format(self.fps, self.frame_max + 1, len(self.Points), self.units))
+                savepath += '.MP4'
 
-                    line1 = "Frame#,Time,"
-                    line2 = ",,"
-                    for index, point in enumerate(self.Points):
-                        line1 += "{0},,,".format(point)
-                        line2 += "X{0},Y{0},Z{0},".format(index + 1)
-                    line1 += ",\n"
-                    line2 += ",\n"
-
-                    f.write(line1)
-                    f.write(line2)
-                    f.write(",\n")
-
-                with open(savepath, 'a') as f:
-                    data = np.zeros((self.xnew.shape[0], self.xnew.shape[1]*3 + 2))
-                    # frame
-                    data[:, 0] = np.arange(1, self.frame_max + 1)
-                    # time
-                    data[:, 1] = np.arange(0, self.frame_max/float(self.fps), 1/float(self.fps))
-
-                    # x
-                    data[:, 2::3] = self.xnew
-                    # y
-                    data[:, 3::3] = self.ynew
-                    # z
-                    data[:, 4::3] = self.znew
-
-                    np.savetxt(f, data, delimiter=',')
 
                 QMessageBox.information(self, "Saved", "Saved to {0}".format(savepath))
 
