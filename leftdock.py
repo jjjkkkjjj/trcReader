@@ -1,6 +1,7 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import time
+import numpy as np
 
 class LeftDockWidget(QWidget):
     def __init__(self, parent):
@@ -63,10 +64,37 @@ class LeftDockWidget(QWidget):
         self.groupVideoMode.setLayout(vboxvideomode)
         VBOX.addWidget(self.groupVideoMode)
 
+        # edit mode
+        self.groupEditMode = QGroupBox("Edit")
+        vboxeditmode = QVBoxLayout()
+
+        self.prevLabel = QLabel()
+        self.prevLabel.setText("No selected")
+        vboxeditmode.addWidget(self.prevLabel)
+
+        self.comboBoxNewLabel = QComboBox()
+        #self.comboBoxNewLabel.addItems(self.parent.Points)
+        vboxeditmode.addWidget(self.comboBoxNewLabel)
+
+        self.checkOverwritefile = QCheckBox("Overwrite File", self)
+        self.checkOverwritefile.setChecked(True)
+        vboxeditmode.addWidget(self.checkOverwritefile)
+
+        self.buttonExchange = QPushButton("Exchange")
+        self.buttonExchange.clicked.connect(self.exchange)
+        self.buttonExchange.setEnabled(False)
+        vboxeditmode.addWidget(self.buttonExchange)
+
+        self.groupEditMode.setLayout(vboxeditmode)
+        self.groupEditMode.setEnabled(False)
+        VBOX.addWidget(self.groupEditMode)
+
         self.setLayout(VBOX)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateVideo)
+
+
 
     # clicked trajectory checkbox
     def show_trajectory_child(self):
@@ -79,6 +107,9 @@ class LeftDockWidget(QWidget):
     # clicked release button
     def release_select(self):
         self.parent.now_select = -1
+        self.prevLabel.setText("No selected")
+        self.comboBoxNewLabel.clear()
+        self.buttonExchange.setEnabled(False)
         self.button_noselect.setEnabled(False)
         self.parent.trajectory_line = None
         self.parent.draw(fix=True)
@@ -107,3 +138,39 @@ class LeftDockWidget(QWidget):
 
     def spinFpsChanged(self):
         self.parent.fps = int(self.spinFps.text())
+
+    def setEditMode(self, label):
+        self.prevLabel.setText(label)
+        self.comboBoxNewLabel.clear()
+        point = [p for p in self.parent.Points if p != label]
+        self.comboBoxNewLabel.addItems(point)
+
+    def exchange(self):
+        prevind = self.parent.Points.index(str(self.prevLabel.text()))
+        newind = self.parent.Points.index(str(self.comboBoxNewLabel.currentText()))
+
+        indlist = np.arange(self.parent.x.shape[1])
+        indlist[prevind] = newind
+        indlist[newind] = prevind
+
+        self.parent.x = self.parent.x[:, indlist]
+        self.parent.y = self.parent.y[:, indlist]
+        self.parent.z = self.parent.z[:, indlist]
+
+        self.parent.calcBone()
+        self.parent.draw(fix=True)
+
+        if self.checkOverwritefile.isChecked():
+            self.parent.rewriteTrc()
+        else:
+            filters = "TRC files(*.trc)"
+            # selected_filter = "CSV files(*.csv)"
+            savepath, extension = QFileDialog.getSaveFileNameAndFilter(self, 'Save file', './data/trc', filters)
+
+            savepath = str(savepath)
+            extension = str(extension)
+            if savepath != "":
+                if savepath[-4:] != '.trc':
+                    savepath += '.trc'
+
+                self.parent.rewriteTrc(path=savepath)

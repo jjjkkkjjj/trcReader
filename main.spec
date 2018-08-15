@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['C:\\Users\\äpè~îVâÓ\\Desktop\\tyukyo\\trcReader'],
+             pathex=['/Users/junkadonosuke/Desktop/project/python/gui/trcReader'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -27,3 +27,7 @@ exe = EXE(pyz,
           upx=True,
           runtime_tmpdir=None,
           console=False )
+app = BUNDLE(exe,
+             name='main.app',
+             icon=None,
+             bundle_identifier=None)

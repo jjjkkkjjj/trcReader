@@ -6,6 +6,9 @@ import csv
 
 import math
 import matplotlib
+import platform
+if platform.system() == "Darwin":
+    matplotlib.use("Qt4Agg")
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -60,15 +63,18 @@ class Data:
             self.z = data[:, 4::3]
             self.frame_max = self.x.shape[0]
 
-            self.bone1 = [[] for i in range(self.frame_max)]
-            self.bone2 = [[] for i in range(self.frame_max)]
-            for t in range(self.frame_max):
-                for line in self.Line:
-                    if np.isnan(self.x[t, line[0]]) or np.isnan(self.x[t, line[1]]):
-                        continue
-                    else:
-                        self.bone1[t].append([self.x[t, line[0]], self.y[t, line[0]], self.z[t, line[0]]])
-                        self.bone2[t].append([self.x[t, line[1]], self.y[t, line[1]], self.z[t, line[1]]])
+            self.calcBone()
+
+    def calcBone(self):
+        self.bone1 = [[] for i in range(self.frame_max)]
+        self.bone2 = [[] for i in range(self.frame_max)]
+        for t in range(self.frame_max):
+            for line in self.Line:
+                if np.isnan(self.x[t, line[0]]) or np.isnan(self.x[t, line[1]]):
+                    continue
+                else:
+                    self.bone1[t].append([self.x[t, line[0]], self.y[t, line[0]], self.z[t, line[0]]])
+                    self.bone2[t].append([self.x[t, line[1]], self.y[t, line[1]], self.z[t, line[1]]])
 
 class trcReader(QMainWindow, Data):
     def __init__(self, parent=None):
@@ -166,6 +172,12 @@ class trcReader(QMainWindow, Data):
         previousframe_action = self.create_action("&Previous", slot=self.previousframe, shortcut="Ctrl+P", tip="show previous frame")
         self.add_actions(self.edit_menu, (previousframe_action,))
 
+        self.editMode_action = self.create_action("&Edit Mode", slot=self.editMode, shortcut="Ctrl+E", tip="edit mode")
+        self.editMode_action.setCheckable(True)
+        self.editMode_action.setChecked(False)
+        self.add_actions(self.edit_menu, (self.editMode_action,))
+        self.editMode_action.setEnabled(False)
+
         #self.configuration_action = self.create_action("&Configuration", slot=self.configure, tip="Set configuration")
         #self.add_actions(self.edit_menu, (self.configuration_action,))
 
@@ -227,6 +239,7 @@ class trcReader(QMainWindow, Data):
             self.groupyrange.setEnabled(True)
             self.groupzrange.setEnabled(True)
 
+            self.editMode_action.setEnabled(True)
             return True
 
         except:
@@ -247,6 +260,45 @@ class trcReader(QMainWindow, Data):
 
                 QMessageBox.information(self, "Saved", "Saved to {0}".format(savepath))
 
+    def rewriteTrc(self, path=None):
+        if path is None:
+            path = self.path
+
+        with open(path, 'w') as f:
+            f.write("PathFileType\t4\t(X/Y/Z)\t{0}\t\n".format(path))
+            f.write("DataRate\tCameraRate\tNumFrames\tNumMarkers\tUnits\tOrigDataRate\tOrigDataStartFrame\tOrigNumFrames\t\n")
+            f.write("{0}\t{0}\t{1}\t{2}\t{3}\t{0}\t1\t{1}\t\n".format(self.fps, self.frame_max + 1, len(self.Points),
+                                                                      self.units))
+
+            line1 = "Frame#\tTime\t"
+            line2 = "\t\t"
+            for index, point in enumerate(self.Points):
+                line1 += "{0}\t\t\t".format(point)
+                line2 += "X{0}\tY{0}\tZ{0}\t".format(index + 1)
+            line1 += "\t\n"
+            line2 += "\t\n"
+
+            f.write(line1)
+            f.write(line2)
+            f.write("\t\n")
+
+        with open(path, 'a') as f:
+            data = np.zeros((self.x.shape[0], self.x.shape[1] * 3 + 2))
+            # frame
+            data[:, 0] = np.arange(1, self.frame_max + 1)
+            # time
+            data[:, 1] = np.arange(0, self.frame_max / float(self.fps), 1 / float(self.fps))
+
+            # x
+            data[:, 2::3] = self.x
+            # y
+            data[:, 3::3] = self.y
+            # z
+            data[:, 4::3] = self.z
+
+            np.savetxt(f, data, delimiter='\t')
+
+        QMessageBox.information(self, "Saved", "Saved to {0}".format(path))
 
     def show_about(self): # show detail of this application
         msg = """ A demo of using PyQt with matplotlib:
@@ -359,7 +411,8 @@ class trcReader(QMainWindow, Data):
             self.now_select = np.where(self.x[self.frame] == x0[ind])[0][0]
 
             self.leftdockwidget.button_noselect.setEnabled(True)
-
+            self.leftdockwidget.setEditMode(self.Points[self.now_select])
+            self.leftdockwidget.buttonExchange.setEnabled(True)
             if self.leftdockwidget.check_trajectory.isChecked():
                 self.show_trajectory()
                 return
@@ -477,6 +530,16 @@ class trcReader(QMainWindow, Data):
                 return
 
         self.trajectory_line = None
+
+    def editMode(self):
+        if self.editMode_action.isChecked():
+            self.leftdockwidget.groupVideoMode.setEnabled(False)
+            self.leftdockwidget.groupEditMode.setEnabled(True)
+            self.editMode_action.setChecked(True)
+        else:
+            self.leftdockwidget.groupVideoMode.setEnabled(True)
+            self.leftdockwidget.groupEditMode.setEnabled(False)
+            self.editMode_action.setChecked(False)
 
     # slider
     def setslider(self, vbox):
