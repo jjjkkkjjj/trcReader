@@ -1,1 +1,5 @@
-.\windows-exe\
+.\windows-exe\*
+.\mac-app\*
+
+./windows-exe/*
+./mac-app/*
