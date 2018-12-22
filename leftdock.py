@@ -2,6 +2,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import time
 import numpy as np
+import os, sys
 
 class LeftDockWidget(QWidget):
     def __init__(self, parent):
@@ -25,7 +26,15 @@ class LeftDockWidget(QWidget):
         self.button_noselect.clicked.connect(self.release_select)
         self.button_noselect.setEnabled(False)
         vboxviewer.addWidget(self.button_noselect)
-        
+
+        self.labelBoneFile = QLabel()
+        self.labelBoneFile.setText("default")
+        vboxviewer.addWidget(self.labelBoneFile)
+
+        self.button_readBoneFile = QPushButton("Read Joint File", self)
+        self.button_readBoneFile.clicked.connect(self.clickReadBoneFile)
+        vboxviewer.addWidget(self.button_readBoneFile)
+
         self.check_showbone = QCheckBox("Show Bone", self)
         self.check_showbone.toggled.connect(self.check_showboneChanged)
         vboxviewer.addWidget(self.check_showbone)
@@ -132,6 +141,26 @@ class LeftDockWidget(QWidget):
     #def showbone(self):
     #    self.parent.setbone()
     #    self.parent.draw(fix=True)
+
+    def clickReadBoneFile(self):
+        filters = "JOINT files(*.joint)"
+        if os.name == 'nt':
+            # windows
+            bonepath = QFileDialog.getOpenFileName(self, 'load file', '', filters)
+        else:
+            # ubuntu
+            bonepath = QFileDialog.getOpenFileName(self, 'load file', '', filters)
+
+        try:
+            if bonepath:
+                self.parent.read_bonefile(bonepath)
+                self.labelBoneFile.setText(bonepath.split(os.path.sep)[-1])
+
+        except Exception as e:
+            err = e.args
+
+            QMessageBox.critical(self, "Caution", '{0} is invalid file.\nError code is {1}'.format(bonepath, err))
+            self.labelBoneFile.setText('default')
 
     def check_showboneChanged(self):
         self.parent.draw(fix=True)

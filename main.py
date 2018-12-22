@@ -56,7 +56,7 @@ class Data:
             self.joints = forthline[2::3]
             if self.joints[-1] == '':
                 self.joints = self.joints[:-1]
-
+            self.Points = self.joints
             data = np.genfromtxt(f, delimiter='\t', skip_header=6, missing_values=' ')
             self.x = data[:, 2::3]
             self.y = data[:, 3::3]
@@ -259,6 +259,33 @@ class trcReader(QMainWindow, Data):
 
 
                 QMessageBox.information(self, "Saved", "Saved to {0}".format(savepath))
+
+    def read_bonefile(self, path):
+        try:
+            with open(path, 'r') as f:
+                lines = f.readlines()
+
+                self.Line = []
+                for line in lines[1:]:
+                    try:
+                        line = line.split('\t')
+                        self.Line.append([self.joints.index(line[0].rstrip()),
+                                          self.joints.index(line[1].split(os.linesep)[0].rstrip())])
+                    except ValueError:
+                        continue
+
+            self.calcBone()
+
+        except Exception as e:
+            # revert default
+
+            self.Line = [[0, 1], [0, 2], [1, 2], [7, 8], [8, 10], [9, 10], [7, 9], [7, 11], [8, 18], [9, 12], [10, 19],
+                         [11, 12], [12, 19], [18, 19], [18, 11], [11, 13],
+                         [12, 14], [13, 14], [13, 15], [14, 16], [15, 16], [15, 17], [16, 17], [18, 20], [19, 21],
+                         [20, 21],
+                         [20, 23], [21, 24], [23, 24], [23, 25], [24, 25],
+                         [3, 5], [3, 6], [5, 6]]
+            raise ValueError('{0} is invalid file.\nError code is {1}'.format(path, e.args))
 
     def rewriteTrc(self, path=None):
         if path is None:
