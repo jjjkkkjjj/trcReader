@@ -25,7 +25,7 @@ class LeftDockWidget(QWidget):
         self.button_noselect.clicked.connect(self.release_select)
         self.button_noselect.setEnabled(False)
         vboxviewer.addWidget(self.button_noselect)
-
+        
         self.check_showbone = QCheckBox("Show Bone", self)
         self.check_showbone.toggled.connect(self.check_showboneChanged)
         vboxviewer.addWidget(self.check_showbone)
